@@ -1,12 +1,15 @@
 package patroni_exporter
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/go-kit/kit/log/level"
 	"github.com/go-resty/resty/v2"
+	"github.com/gopaytech/patroni_exporter/collector"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
@@ -19,8 +22,33 @@ type patroniOpts struct {
 	port string
 }
 
-func newPatroniExporter(opts patroniOpts) error {
-	return nil
+type patroniField struct {
+	Scope   string `json:"scope"`
+	Version string `json:"version"`
+}
+
+type patroniJSONResp struct {
+	State   string       `json:"state"`
+	Role    string       `json:"role"`
+	Patroni patroniField `json:"patroni"`
+}
+
+type PatroniClient interface {
+	GetMetrics() error
+}
+
+type patroniClient struct {
+	resty resty.Client
+	host  string
+	port  string
+}
+
+func newPatroniClient(opts patroniOpts) PatroniClient {
+	r := resty.New()
+	r.SetHostURL(fmt.Sprintf("%s:%s", opts.host, opts.host))
+	return &patroniClient{
+		resty: r,
+	}
 }
 
 var (
@@ -42,11 +70,15 @@ func main() {
 	level.Info(logger).Log("msg", "Starting patroni_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "context", version.BuildContext())
 
-	patroni := newPatroniExporter(opts)
+	patroniClient := newPatroniClient(opts)
 	if err != nil {
 		level.Error(logger).Log("msg", "Error initialize patroni_exporter", "err", err)
 		os.Exit(1)
 	}
+
+	collector := collector.NewPatroniCollector(patroniClient, logger)
+	prometheus.MustRegister(collector)
+	prometheus.MustRegister(version.NewCollector("patroni_exporter"))
 
 	level.Info(logger).Log("msg", "Listening on address", "address", *listenAddress)
 	http.Handle(*metricsPath, promhttp.Handler())
@@ -63,10 +95,20 @@ func main() {
 		level.Error(logger).Log("msg", "Error starting HTTP server", "err", err)
 		os.Exit(1)
 	}
+}
 
-	restyClient := resty.New()
-	resp, err := restyClient.R().EnableTrace().Get(fmt.Sprintf("%s:%s/patroni", opts.host, opts.port))
+func (p *patroniClient) GetMetrics() (patroniJSONResp, error) {
+	resp, err := p.resty.R().EnableTrace().Get("/patroni")
 	if err != nil {
-		fmt.Errorf(err)
+		return patroniJSONResp{}, err
 	}
+
+	var objmap patroniJSONResp
+
+	err := json.Unmarshal(resp.Body, &objmap)
+	if err != nil {
+		return patroniJSONResp{}, err
+	}
+
+	return objmap, nil
 }

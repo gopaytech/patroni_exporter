@@ -4,30 +4,35 @@ import (
 	"log"
 	"sync"
 
+	"github.com/gopaytech/patroni_exporter"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type initialCollector struct {
 	collectors []prometheus.Collector
+	client     patroni_exporter.PatroniClient
 	logger     log.Logger
 }
 
+const namespace = "patroni"
+
 var (
-	factories = make(map[string]func(logger log.Logger) prometheus.Collector)
+	factories = make(map[string]func(client patroni_exporter.PatroniClient, logger log.Logger) prometheus.Collector)
 )
 
-func registerCollector(collector string, factory func(logger log.Logger) prometheus.Collector) {
+func registerCollector(collector string, factory func(client patroni_exporter.PatroniClient, logger log.Logger) prometheus.Collector) {
 	factories[collector] = factory
 }
 
-func NewPatroniCollector(logger log.Logger) prometheus.Collector {
+func NewPatroniCollector(client patroni_exporter.PatroniClient, logger log.Logger) prometheus.Collector {
 	var collectors []prometheus.Collector
 	for key, factory := range factories {
-		collector := factory(log.With(logger, "collector", key))
+		collector := factory(client, log.With(logger, "collector", key))
 		collectors = append(collectors, collector)
 	}
 	return initialCollector{
 		collectors: collectors,
+		client:     client,
 		logger:     logger,
 	}
 }
