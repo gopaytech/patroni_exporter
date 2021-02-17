@@ -1,7 +1,8 @@
 package collector
 
 import (
-	"log"
+	"github.com/go-kit/kit/log"
+	"github.com/gopaytech/patroni_exporter/client"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -19,7 +20,7 @@ type patroniCollector struct {
 	logger log.Logger
 }
 
-func createPatroniCollectorFactory(logger log.Logger) prometheus.Collector {
+func createPatroniCollectorFactory(client client.PatroniClient, logger log.Logger) prometheus.Collector {
 	state := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "cluster_node", "state"),
 		"The current state of Patroni service",
