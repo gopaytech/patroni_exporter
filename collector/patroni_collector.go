@@ -18,29 +18,38 @@ func init() {
 
 var (
 	possiblePatroniState = [...]string{"RUNNING", "STOPPED", "PROMOTED", "UNKNOWN"}
+	possiblePatroniRole  = [...]string{"MASTER", "REPLICA"}
 )
 
 type patroniCollector struct {
-	state  *prometheus.Desc
-	logger log.Logger
-	client client.PatroniClient
+	stateDesc *prometheus.Desc
+	roleDesc  *prometheus.Desc
+	logger    log.Logger
+	client    client.PatroniClient
 }
 
 func createPatroniCollectorFactory(client client.PatroniClient, logger log.Logger) prometheus.Collector {
-	state := prometheus.NewDesc(
+	stateDesc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "cluster_node", "state"),
 		"The current state of Patroni service",
 		[]string{"state"},
 		nil)
+	roleDesc := prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "cluster_node", "role"),
+		"The current PostgreSQL role of Patroni node",
+		[]string{"role"},
+		nil)
 	return &patroniCollector{
-		state:  state,
-		logger: logger,
-		client: client,
+		stateDesc: stateDesc,
+		roleDesc:  roleDesc,
+		logger:    logger,
+		client:    client,
 	}
 }
 
 func (p *patroniCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- p.state
+	ch <- p.stateDesc
+	ch <- p.roleDesc
 }
 
 func (p *patroniCollector) Collect(ch chan<- prometheus.Metric) {
@@ -54,6 +63,14 @@ func (p *patroniCollector) Collect(ch chan<- prometheus.Metric) {
 		if strings.ToUpper(patroniResponse.State) == possibleState {
 			stateValue = 1.0
 		}
-		ch <- prometheus.MustNewConstMetric(p.state, prometheus.GaugeValue, stateValue, possibleState)
+		ch <- prometheus.MustNewConstMetric(p.stateDesc, prometheus.GaugeValue, stateValue, possibleState)
+	}
+
+	for _, possibleRole := range possiblePatroniRole {
+		stateValue := 0.0
+		if strings.ToUpper(patroniResponse.Role) == possibleRole {
+			stateValue = 1.0
+		}
+		ch <- prometheus.MustNewConstMetric(p.roleDesc, prometheus.GaugeValue, stateValue, possibleRole)
 	}
 }
