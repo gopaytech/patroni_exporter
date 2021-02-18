@@ -5,15 +5,17 @@ import (
 	"os"
 
 	"github.com/go-kit/kit/log/level"
-	"github.com/gopaytech/patroni_exporter/client"
-	"github.com/gopaytech/patroni_exporter/collector"
-	options "github.com/gopaytech/patroni_exporter/opts"
+	"github.com/go-resty/resty/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/gopaytech/patroni_exporter/client"
+	"github.com/gopaytech/patroni_exporter/collector"
+	options "github.com/gopaytech/patroni_exporter/opts"
 )
 
 var (
@@ -35,7 +37,8 @@ func main() {
 	level.Info(logger).Log("msg", "Starting patroni_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "context", version.BuildContext())
 
-	patroniClient := client.NewPatroniClient(opts)
+	httpClient := resty.New()
+	patroniClient := client.NewPatroniClient(httpClient, opts)
 	// if err != nil {
 	// level.Error(logger).Log("msg", "Error initialize patroni_exporter", "err", err)
 	// os.Exit(1)

@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
+
 	"github.com/gopaytech/patroni_exporter/opts"
-	options "github.com/gopaytech/patroni_exporter/opts"
 )
 
 type PatroniClient interface {
@@ -26,31 +26,26 @@ type patroniJSONResp struct {
 
 type patroniClient struct {
 	resty *resty.Client
-	options.PatroniOpts
 }
 
 func (p *patroniClient) GetMetrics() (patroniJSONResp, error) {
-	resp, err := p.resty.R().EnableTrace().Get("/patroni")
+	resp, err := p.resty.R().Get("/patroni")
 	if err != nil {
 		return patroniJSONResp{}, err
 	}
 
 	var objmap patroniJSONResp
-
 	err = json.Unmarshal(resp.Body(), &objmap)
 	if err != nil {
 		return patroniJSONResp{}, err
 	}
 
-	fmt.Println(objmap)
-
 	return objmap, nil
 }
 
-func NewPatroniClient(opts opts.PatroniOpts) PatroniClient {
-	r := resty.New()
-	r.SetHostURL(fmt.Sprintf("%s:%s", opts.Host, opts.Host))
+func NewPatroniClient(httpClient *resty.Client, opts opts.PatroniOpts) *patroniClient {
+	httpClient.SetHostURL(fmt.Sprintf("%s:%s", opts.Host, opts.Port))
 	return &patroniClient{
-		resty: r,
+		resty: httpClient,
 	}
 }
