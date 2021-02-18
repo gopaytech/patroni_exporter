@@ -22,10 +22,11 @@ var (
 )
 
 type patroniCollector struct {
-	stateDesc *prometheus.Desc
-	roleDesc  *prometheus.Desc
-	logger    log.Logger
-	client    client.PatroniClient
+	stateDesc  *prometheus.Desc
+	roleDesc   *prometheus.Desc
+	staticDesc *prometheus.Desc
+	logger     log.Logger
+	client     client.PatroniClient
 }
 
 func createPatroniCollectorFactory(client client.PatroniClient, logger log.Logger) prometheus.Collector {
@@ -39,11 +40,17 @@ func createPatroniCollectorFactory(client client.PatroniClient, logger log.Logge
 		"The current PostgreSQL role of Patroni node",
 		[]string{"role", "scope"},
 		nil)
+	staticDesc := prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "cluster_node", "static"),
+		"The collection of static value as reported by Patroni",
+		[]string{"version"},
+		nil)
 	return &patroniCollector{
-		stateDesc: stateDesc,
-		roleDesc:  roleDesc,
-		logger:    logger,
-		client:    client,
+		stateDesc:  stateDesc,
+		roleDesc:   roleDesc,
+		staticDesc: staticDesc,
+		logger:     logger,
+		client:     client,
 	}
 }
 
@@ -73,4 +80,5 @@ func (p *patroniCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 		ch <- prometheus.MustNewConstMetric(p.roleDesc, prometheus.GaugeValue, stateValue, possibleRole, patroniResponse.Patroni.Scope)
 	}
+	ch <- prometheus.MustNewConstMetric(p.staticDesc, prometheus.GaugeValue, 1.0, patroniResponse.Patroni.Version)
 }
