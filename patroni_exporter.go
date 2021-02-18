@@ -25,7 +25,7 @@ var (
 )
 
 func main() {
-	kingpin.Flag("patroni.host", "Patroni host or IP Address").Default("localhost").StringVar(&opts.Host)
+	kingpin.Flag("patroni.host", "Patroni host or IP Address").Default("http://localhost").StringVar(&opts.Host)
 	kingpin.Flag("patroni.port", "Patroni port").Default("8008").StringVar(&opts.Port)
 
 	promlogConfig := &promlog.Config{}
