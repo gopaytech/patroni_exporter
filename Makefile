@@ -16,7 +16,7 @@ endif
 .PHONY: build
 build:
 	mkdir -p .build/${GOOS}-${GOARCH}
-	$(ENVVAR) GOOS=$(GOOS) go build -o .build/${GOOS}-${GOARCH}/patroni_exporter ${LDFLAGS_FLAG}
+	$(ENVVAR) GOOS=$(GOOS) go build -o .build/${GOOS}-${GOARCH}/patroni_exporter ${LDFLAGS_FLAG} ./cmd/main.go
 
 .PHONY: test
 test:
