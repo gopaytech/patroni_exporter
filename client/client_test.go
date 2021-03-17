@@ -85,3 +85,24 @@ func TestPatroniClient_GetMetricsSuccess(t *testing.T) {
 	assert.Equal(t, "cluster", resp.Patroni.Scope)
 	assert.Equal(t, "2.0.1", resp.Patroni.Version)
 }
+
+func TestPatroniClient_GetMetricsFailed(t *testing.T) {
+	context := clientTestContext{}
+	context.setUp(t)
+	defer context.tearDown()
+
+	httpmock.RegisterResponder(
+		"GET",
+		context.getMetricsUrl,
+		func(request *http.Request) (response *http.Response, err error) {
+			return httpmock.NewStringResponse(503, PATRONI_RESPONSE), nil
+		},
+	)
+
+	resp, err := context.client.GetMetrics()
+	assert.Error(t, err)
+	assert.Empty(t, resp.State)
+	assert.Empty(t, resp.Role)
+	assert.Empty(t, resp.Patroni.Scope)
+	assert.Empty(t, resp.Patroni.Version)
+}

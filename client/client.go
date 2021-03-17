@@ -33,6 +33,9 @@ func (p *patroniClient) GetMetrics() (patroniJSONResp, error) {
 	if err != nil {
 		return patroniJSONResp{}, err
 	}
+	if resp.IsError() {
+		return patroniJSONResp{}, fmt.Errorf("got response status %d", resp.StatusCode())
+	}
 
 	var objmap patroniJSONResp
 	err = json.Unmarshal(resp.Body(), &objmap)
