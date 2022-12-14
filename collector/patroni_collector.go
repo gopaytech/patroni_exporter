@@ -6,9 +6,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-
 	"github.com/gopaytech/patroni_exporter/client"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -25,6 +23,7 @@ type patroniCollector struct {
 	stateDesc  *prometheus.Desc
 	roleDesc   *prometheus.Desc
 	staticDesc *prometheus.Desc
+	upDesc     *prometheus.Desc
 	logger     log.Logger
 	client     client.PatroniClient
 }
@@ -45,10 +44,16 @@ func createPatroniCollectorFactory(client client.PatroniClient, logger log.Logge
 		"The collection of static value as reported by Patroni",
 		[]string{"version"},
 		nil)
+	upDesc := prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "node", "up"),
+		"The current status of Patroni service",
+		[]string{},
+		nil)
 	return &patroniCollector{
 		stateDesc:  stateDesc,
 		roleDesc:   roleDesc,
 		staticDesc: staticDesc,
+		upDesc:     upDesc,
 		logger:     logger,
 		client:     client,
 	}
@@ -62,7 +67,8 @@ func (p *patroniCollector) Describe(ch chan<- *prometheus.Desc) {
 func (p *patroniCollector) Collect(ch chan<- prometheus.Metric) {
 	patroniResponse, err := p.client.GetMetrics()
 	if err != nil {
-		level.Error(p.logger).Log("msg", "Unable to get metrics from Patroni", "err", fmt.Sprintf("errornya: %v", err))
+		level.Error(p.logger).Log("msg", "Unable to get metrics from Patroni", "err", fmt.Sprintf("error: %v", err))
+		ch <- prometheus.MustNewConstMetric(p.upDesc, prometheus.GaugeValue, 0)
 		return
 	}
 	for _, possibleState := range possiblePatroniState {
@@ -81,4 +87,5 @@ func (p *patroniCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(p.roleDesc, prometheus.GaugeValue, stateValue, possibleRole, patroniResponse.Patroni.Scope)
 	}
 	ch <- prometheus.MustNewConstMetric(p.staticDesc, prometheus.GaugeValue, 1.0, patroniResponse.Patroni.Version)
+	ch <- prometheus.MustNewConstMetric(p.upDesc, prometheus.GaugeValue, 1)
 }

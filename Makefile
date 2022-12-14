@@ -25,3 +25,7 @@ test:
 .PHONY: fmt
 fmt:
 	$(GOFMT) $(PKGS)
+
+.PHONY: run
+run:
+	.build/${GOOS}-${GOARCH}/patroni_exporter --patroni.host="http://localhost" --patroni.port=8008
