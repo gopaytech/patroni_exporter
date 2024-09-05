@@ -16,7 +16,7 @@ func init() {
 
 var (
 	possiblePatroniState = [...]string{"RUNNING", "STOPPED", "PROMOTED", "UNKNOWN"}
-	possiblePatroniRole  = [...]string{"MASTER", "REPLICA", "STANDBY_LEADER"}
+	possiblePatroniRole  = [...]string{"MASTER", "PRIMARY", "REPLICA", "STANDBY_LEADER"}
 )
 
 type patroniCollector struct {
